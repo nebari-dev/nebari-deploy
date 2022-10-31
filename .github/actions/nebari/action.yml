@@ -1,0 +1,99 @@
+name: 'Deploy Nebari'
+description: 'Deploy Nebari from GitHub Actions'
+inputs:
+  nebari-version:
+    description: 'Nebari Version'
+    required: false
+    default: "2022.10.1"
+  project-name:
+    description: 'Nebari Project Name'
+    required: false
+    default: "aktech-nebari"
+  vendor:
+    description: 'Cloud Provider'
+    required: false
+    default: "aws"
+  github-repository:
+    description: 'GitHub Repository for Nebari Deployment'
+    required: false
+    default: "aktech/aktech-nebari"
+  ciprovider:
+    description: 'CI/CD Provider'
+    required: false
+    default: "github-actions"
+  domain:
+    description: 'Nebari Domain'
+    required: false
+    default: "nebari.iamit.in"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4.3.0
+      with:
+        python-version: '3.10'
+
+    - name: Check input
+      shell: bash
+      run: echo ${{ inputs }}
+
+    - name: Install Nebari
+      shell: bash
+      run: |
+        pip install nebari==${{ inputs.nebari-version }}
+
+#    - name: Debugging with tmate
+#      uses: mxschmitt/action-tmate@v3.13
+
+    - name: Set Environment Variables
+      shell: bash
+      run: |
+        echo "GITHUB_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
+        echo "GITHUB_USERNAME=$GH_USERNAME" >> $GITHUB_ENV
+
+    - name: Create temp nebari directory
+      shell: bash
+      run: |
+        mkdir /tmp/nebari-deploy
+
+    - name: Nebari Init
+      shell: bash
+      working-directory: /tmp/nebari-deploy
+      run: |
+        nebari init ${{ inputs.vendor }} \
+        --domain-name ${{ inputs.domain }} \
+        --project ${{ inputs.project-name }} \
+        --auth-provider password \
+        --repository github.com/${{ inputs.github-repository }} \
+        --repository-auto-provision \
+        --ci-provider=${{ inputs.ciprovider }} \
+        --disable-prompt
+
+    - name: Nebari Render
+      shell: bash
+      working-directory: /tmp/nebari-deploy
+      run: |
+        nebari render -c nebari-config.yaml
+
+    - name: Nebari Commit & Push
+      shell: bash
+      working-directory: /tmp/nebari-deploy
+      run: |
+        git config --global user.email "bot@nebari.dev"
+        git config --global user.name "Nebari Bot"
+        git add .
+        git status
+        git commit -m "Init from nebari deploy github action"
+        git remote set-url origin https://$GH_USERNAME:$GITHUB_TOKEN@github.com/${{ inputs.github-repository }}.git
+        git push --set-upstream origin main
+
+    - name: Nebari Trigger Deploy
+      shell: bash
+      working-directory: /tmp/nebari-deploy
+      run: |
+        echo "" >> nebari-config.yaml
+        git add .
+        git status
+        git commit -m "Trigger Deploy"
+        git push --set-upstream origin main

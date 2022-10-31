@@ -1,14 +1,50 @@
-on: [push]
+name: Nebari Deploy
+
+on:
+  workflow_dispatch:
+    # TODO: Remove duplication of inputs from here and nebari/action.yml
+    inputs:
+      nebari-version:
+        description: 'Nebari Version'
+        required: false
+        default: "2022.10.1"
+      project-name:
+        description: 'Nebari Project Name'
+        required: false
+        default: "nebarideploy"
+      vendor:
+        description: 'Cloud Provider'
+        required: false
+        default: "aws"
+      github-repository:
+        description: 'GitHub Repository for Nebari Deployment'
+        required: true
+        default: "aktech/aktech-nebari"
+      ciprovider:
+        description: 'CI/CD Provider'
+        required: false
+        default: "github-actions"
+      domain:
+        description: 'Nebari Domain'
+        required: true
+        default: "nebari.iamit.in"
 
 jobs:
-  hello_world_job:
+  deploy:
     runs-on: ubuntu-latest
-    name: A job to say hello
+    name: Deploy Nebari
     steps:
       - uses: actions/checkout@v3
-      - id: foo
-        uses: actions/hello-world-composite-action@v1
+      - name: secrets-to-env-action
+        uses: oNaiPs/secrets-to-env-action@v1
         with:
-          who-to-greet: 'Mona the Octocat'
-      - run: echo random-number ${{ steps.foo.outputs.random-number }}
-        shell: bash
+          secrets: ${{ toJSON(secrets) }}
+      - id: nebari
+        uses: ./.github/actions/nebari
+        with:
+          nebari-version: ${{ inputs.nebari-version }}
+          project-name: ${{ inputs.project-name }}
+          vendor: ${{ inputs.vendor }}
+          github-repository: ${{ inputs.github-repository }}
+          ciprovider: ${{ inputs.ciprovider }}
+          domain: ${{ inputs.domain }}
