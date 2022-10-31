@@ -88,12 +88,19 @@ runs:
         git remote set-url origin https://$GH_USERNAME:$GITHUB_TOKEN@github.com/${{ inputs.github-repository }}.git
         git push --set-upstream origin main
 
-    - name: Nebari Trigger Deploy
+#    - name: Nebari Trigger Deploy
+#      shell: bash
+#      working-directory: /tmp/nebari-deploy
+#      run: |
+#        echo "" >> nebari-config.yaml
+#        git add .
+#        git status
+#        git commit -m "Trigger Deploy"
+#        git push --set-upstream origin main
+
+    - name: Generate list using Markdown
       shell: bash
-      working-directory: /tmp/nebari-deploy
       run: |
-        echo "" >> nebari-config.yaml
-        git add .
-        git status
-        git commit -m "Trigger Deploy"
-        git push --set-upstream origin main
+        echo "# Nebari Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+        echo "Checkout the actions on this repository to see Deployment Progress:" >> $GITHUB_STEP_SUMMARY
+        echo "https://github.com/${{ inputs.github-repository }}" >> $GITHUB_STEP_SUMMARY
