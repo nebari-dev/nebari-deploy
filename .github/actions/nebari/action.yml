@@ -13,10 +13,14 @@ inputs:
     description: 'Cloud Provider'
     required: false
     default: "aws"
+  github-username:
+    description: 'GitHub Username'
+    required: false
+    default: "aktech"
   github-repository:
     description: 'GitHub Repository for Nebari Deployment'
     required: false
-    default: "aktech/aktech-nebari"
+    default: "nebari-deployment"
   ciprovider:
     description: 'CI/CD Provider'
     required: false
@@ -50,7 +54,7 @@ runs:
       shell: bash
       run: |
         echo "GITHUB_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
-        echo "GITHUB_USERNAME=$GH_USERNAME" >> $GITHUB_ENV
+        echo "GITHUB_USERNAME=${{ inputs.github-username }}" >> $GITHUB_ENV
 
     - name: Create temp nebari directory
       shell: bash
@@ -61,14 +65,15 @@ runs:
       shell: bash
       working-directory: /tmp/nebari-deploy
       run: |
+        github_repository=github.com/${{ inputs.github-username }}/${{ inputs.github-repository }}
         nebari init ${{ inputs.vendor }} \
-        --domain-name ${{ inputs.domain }} \
-        --project ${{ inputs.project-name }} \
-        --auth-provider password \
-        --repository github.com/${{ inputs.github-repository }} \
-        --repository-auto-provision \
-        --ci-provider=${{ inputs.ciprovider }} \
-        --disable-prompt
+          --domain-name ${{ inputs.domain }} \
+          --project ${{ inputs.project-name }} \
+          --auth-provider password \
+          --repository $github_repository \
+          --repository-auto-provision \
+          --ci-provider=${{ inputs.ciprovider }} \
+          --disable-prompt
 
     - name: Nebari Render
       shell: bash
@@ -80,27 +85,30 @@ runs:
       shell: bash
       working-directory: /tmp/nebari-deploy
       run: |
+        github_repository=github.com/${{ inputs.github-username }}/${{ inputs.github-repository }}
         git config --global user.email "bot@nebari.dev"
         git config --global user.name "Nebari Bot"
         git add .
         git status
         git commit -m "Init from nebari deploy github action"
-        git remote set-url origin https://$GH_USERNAME:$GITHUB_TOKEN@github.com/${{ inputs.github-repository }}.git
+        git remote set-url origin https://${{ inputs.github-username }}:$GITHUB_TOKEN@$github_repository.git
         git push --set-upstream origin main
 
-#    - name: Nebari Trigger Deploy
-#      shell: bash
-#      working-directory: /tmp/nebari-deploy
-#      run: |
-#        echo "" >> nebari-config.yaml
-#        git add .
-#        git status
-#        git commit -m "Trigger Deploy"
-#        git push --set-upstream origin main
+    - name: Nebari Trigger Deploy
+      shell: bash
+      working-directory: /tmp/nebari-deploy
+      run: |
+        echo "" >> nebari-config.yaml
+        git add .
+        git status
+        git commit -m "Trigger Deploy"
+        echo "Wait for 5 seconds to make sure repository is ready to enable github actions"
+        sleep 5
+        git push --set-upstream origin main
 
     - name: Generate list using Markdown
       shell: bash
       run: |
-        echo "# Nebari Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
-        echo "Checkout the actions on this repository to see Deployment Progress:" >> $GITHUB_STEP_SUMMARY
-        echo "https://github.com/${{ inputs.github-repository }}" >> $GITHUB_STEP_SUMMARY
+        github_repository=github.com/${{ inputs.github-username }}/${{ inputs.github-repository }}
+        echo "### Nebari Deployment Summary :rocket:" >> $GITHUB_STEP_SUMMARY
+        echo "Checkout the actions on this repository to see Deployment Progress: https://$github_repository/actions" >> $GITHUB_STEP_SUMMARY

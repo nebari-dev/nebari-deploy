@@ -4,6 +4,18 @@ on:
   workflow_dispatch:
     # TODO: Remove duplication of inputs from here and nebari/action.yml
     inputs:
+      github-username:
+        description: 'GitHub Username'
+        required: true
+        default: "aktech"
+      domain:
+        description: 'Nebari Domain'
+        required: true
+        default: "nebari.iamit.in"
+      github-repository:
+        description: 'GitHub Repository for Nebari Deployment'
+        required: false
+        default: "nebari-deployment"
       nebari-version:
         description: 'Nebari Version'
         required: false
@@ -16,18 +28,10 @@ on:
         description: 'Cloud Provider'
         required: false
         default: "aws"
-      github-repository:
-        description: 'GitHub Repository for Nebari Deployment'
-        required: true
-        default: "aktech/aktech-nebari"
       ciprovider:
         description: 'CI/CD Provider'
         required: false
         default: "github-actions"
-      domain:
-        description: 'Nebari Domain'
-        required: true
-        default: "nebari.iamit.in"
 
 jobs:
   deploy:
@@ -35,11 +39,11 @@ jobs:
     name: Deploy Nebari
     steps:
       - uses: actions/checkout@v3
-      - name: secrets-to-env-action
+      - name: Set GitHub Secrets as Environment variables
         uses: oNaiPs/secrets-to-env-action@v1
         with:
           secrets: ${{ toJSON(secrets) }}
-      - id: nebari
+      - name: Nebari Init and Deployment Trigger
         uses: ./.github/actions/nebari
         with:
           nebari-version: ${{ inputs.nebari-version }}
@@ -48,3 +52,4 @@ jobs:
           github-repository: ${{ inputs.github-repository }}
           ciprovider: ${{ inputs.ciprovider }}
           domain: ${{ inputs.domain }}
+          github-username: ${{ inputs.github-username }}
